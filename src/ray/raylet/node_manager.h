@@ -112,6 +112,8 @@ struct NodeManagerConfig {
   int64_t min_spilling_size;
   // The key-value labels of this node.
   absl::flat_hash_map<std::string, std::string> labels;
+  // The memory pool id that this node has access to
+  std::string shm_pool_id_;
 
   void AddDefaultLabels(const std::string &self_node_id);
 };
@@ -712,6 +714,11 @@ class NodeManager : public rpc::NodeManagerServiceHandler,
   /// channel is registered.
   std::shared_ptr<raylet::RayletClient> CreateRayletClient(
       const NodeID &node_id, rpc::ClientCallManager &client_call_manager);
+
+
+  // The memory pool id that this node has access to
+  // std::string shm_pool_id_;
+
 
   /// ID of this node.
   NodeID self_node_id_;

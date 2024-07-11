@@ -308,6 +308,24 @@ int main(int argc, char *argv[]) {
                            ? static_cast<int>(num_cpus_it->second)
                            : 0;
 
+        // TODO Move this prefix definition into a header file somewhere
+        // TODO(maxwell) 
+        std::string pool_id_prefix("pool_id_");
+        std::string shm_pool_id_;
+
+        for(auto &resource_pair : static_resource_conf){
+            int compare_status = resource_pair.first.compare(
+              0, pool_id_prefix.size(), pool_id_prefix);
+            if(compare_status == 0){
+              shm_pool_id_ = resource_pair.first;
+              break;
+            }
+        } // for
+
+        RAY_LOG(INFO) << "HUE HUE NODE POOL ID: " << shm_pool_id_ << "\n";
+
+        node_manager_config.shm_pool_id_ = shm_pool_id_; 
+
         node_manager_config.raylet_config = stored_raylet_config.get();
         node_manager_config.resource_config = ray::ResourceSet(static_resource_conf);
         RAY_LOG(DEBUG) << "Starting raylet with static resource configuration: "

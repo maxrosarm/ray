@@ -464,7 +464,9 @@ void LocalObjectManager::AsyncRestoreSpilledObject(
     RAY_LOG(DEBUG) << "Sending restore spilled object request";
     rpc::RestoreSpilledObjectsRequest request;
     request.add_spilled_objects_url(std::move(object_url));
-    request.add_object_ids_to_restore(object_id.Binary());
+    request.add_object_ids_to_restore(object_id.Binary()); 
+
+    // TODO(maxwell) 
     io_worker->rpc_client()->RestoreSpilledObjects(
         request,
         [this, start_time, object_id, object_size, callback, io_worker](

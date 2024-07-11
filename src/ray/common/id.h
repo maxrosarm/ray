@@ -393,6 +393,7 @@ std::ostream &operator<<(std::ostream &os, const TaskID &id);
 std::ostream &operator<<(std::ostream &os, const ObjectID &id);
 std::ostream &operator<<(std::ostream &os, const PlacementGroupID &id);
 
+// TODO(maxwell) examine if need to convert string to UniqueID instead
 #define DEFINE_UNIQUE_ID(type)                                                           \
   class RAY_EXPORT type : public UniqueID {                                              \
    public:                                                                               \

@@ -160,6 +160,7 @@ NodeManager::NodeManager(
           },
           &io_service_)),
       object_directory_(std::make_unique<OwnershipBasedObjectDirectory>(
+          config.shm_pool_id_, 
           io_service_,
           gcs_client_,
           core_worker_subscriber_.get(),
@@ -174,6 +175,7 @@ NodeManager::NodeManager(
       object_manager_(
           io_service,
           self_node_id,
+          config.shm_pool_id_,
           object_manager_config,
           object_directory_.get(),
           [this](const ObjectID &object_id,
@@ -283,8 +285,14 @@ NodeManager::NodeManager(
           RayConfig::instance().memory_usage_threshold(),
           RayConfig::instance().min_memory_free_bytes(),
           RayConfig::instance().memory_monitor_refresh_ms(),
-          CreateMemoryUsageRefreshCallback())) {
+          CreateMemoryUsageRefreshCallback()))
+          { // end of initializer list
   RAY_LOG(INFO).WithField(kLogKeyNodeID, self_node_id_) << "Initializing NodeManager";
+  // TODO(maxwell)
+  //RAY_LOG(INFO) << "THIS IS THE RESOURCE MAP FOR THIS NODE: \n";
+  //for(auto &pairing : config.resource_config.GetResourceMap()){
+  //    RAY_LOG(INFO) << pairing.first << ": " << pairing.second << "!!!\n";
+  //} // for  
   cluster_resource_scheduler_ = std::make_shared<ClusterResourceScheduler>(
       io_service,
       scheduling::NodeID(self_node_id_.Binary()),
@@ -2372,7 +2380,7 @@ std::string NodeManager::DebugString() const {
   if (cluster_task_manager_ != nullptr) {
     result << "\nClusterTaskManager:\n";
     result << cluster_task_manager_->DebugStr();
-  }
+  } 
   result << "\nClusterResources:";
   result << "\n" << local_object_manager_.DebugString();
   result << "\n" << object_manager_.DebugString();

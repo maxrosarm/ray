@@ -47,7 +47,8 @@ using OnLocationsFound = std::function<void(const ray::ObjectID &object_id,
                                             const std::string &,
                                             const NodeID &,
                                             bool pending_creation,
-                                            size_t object_size)>;
+                                            size_t object_size,
+                                            const std::string &shm_pool_id)>;
 
 class IObjectDirectory {
  public:

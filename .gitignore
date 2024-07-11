@@ -1,5 +1,7 @@
 # The build output should clearly not be checked in
 /python/bazel_cache
+/python/BUILD_WORKING_DIRECTORY/bazel_cache
+bazel_repo_cache
 *test-output.xml
 /bazel-*
 /python/ray/core

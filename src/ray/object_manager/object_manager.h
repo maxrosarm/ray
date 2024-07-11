@@ -25,6 +25,7 @@
 #include <mutex>
 #include <random>
 #include <thread>
+#include <string>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
@@ -172,6 +173,7 @@ class ObjectManager : public ObjectManagerInterface,
   explicit ObjectManager(
       instrumented_io_context &main_service,
       const NodeID &self_node_id,
+      const std::string &shm_pool_id_,
       const ObjectManagerConfig &config,
       IObjectDirectory *object_directory,
       RestoreSpilledObjectCallback restore_spilled_object,
@@ -397,6 +399,7 @@ class ObjectManager : public ObjectManagerInterface,
   instrumented_io_context *main_service_;
 
   NodeID self_node_id_;
+  std::string self_shm_pool_id_;
   const ObjectManagerConfig config_;
   /// The object directory interface to access object information.
   IObjectDirectory *object_directory_;

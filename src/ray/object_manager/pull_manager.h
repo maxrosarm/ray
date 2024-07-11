@@ -18,6 +18,7 @@
 #include <boost/asio/error.hpp>
 #include <boost/bind/bind.hpp>
 #include <map>
+#include <string>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
@@ -66,6 +67,7 @@ class PullManager {
   /// retrieve an spilled object from the external store.
   PullManager(
       NodeID &self_node_id,
+      std::string &shm_pool_id_,
       const std::function<bool(const ObjectID &)> object_is_local,
       const std::function<void(const ObjectID &, const NodeID &)> send_pull_request,
       const std::function<void(const ObjectID &)> cancel_pull_request,
@@ -121,7 +123,8 @@ class PullManager {
                         const std::string &spilled_url,
                         const NodeID &spilled_node_id,
                         bool pending_creation,
-                        size_t object_size);
+                        size_t object_size,
+                        const std::string &shm_pool_id);
 
   /// Cancel an existing pull request.
   ///
@@ -188,6 +191,7 @@ class PullManager {
           num_retries(0),
           bundle_request_ids() {}
     std::vector<NodeID> client_locations;
+    std::string shm_pool_id;
     std::string spilled_url;
     NodeID spilled_node_id;
     bool pending_object_creation = false;
@@ -435,6 +439,7 @@ class PullManager {
 
   /// See the constructor's arguments.
   NodeID self_node_id_;
+  std::string self_shm_pool_id_;
   const std::function<bool(const ObjectID &)> object_is_local_;
   const std::function<void(const ObjectID &, const NodeID &)> send_pull_request_;
   const std::function<void(const ObjectID &)> cancel_pull_request_;

@@ -115,6 +115,9 @@ message WorkerObjectLocationsPubMessage {
   bool pending_creation = 8;
   // Whether or not this object was spilled.
   bool did_spill = 9;
+
+  // pool ids spilled to
+  string shm_pool_id = 10;
 }
 
 /// Indicating the subscriber needs to handle failure callback.

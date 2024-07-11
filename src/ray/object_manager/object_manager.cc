@@ -56,6 +56,7 @@ ObjectStoreRunner::~ObjectStoreRunner() {
 ObjectManager::ObjectManager(
     instrumented_io_context &main_service,
     const NodeID &self_node_id,
+    const std::string &shm_pool_id_,
     const ObjectManagerConfig &config,
     IObjectDirectory *object_directory,
     RestoreSpilledObjectCallback restore_spilled_object,
@@ -68,6 +69,7 @@ ObjectManager::ObjectManager(
     const std::function<void(const ObjectID &, rpc::ErrorType)> fail_pull_request)
     : main_service_(&main_service),
       self_node_id_(self_node_id),
+      self_shm_pool_id_(shm_pool_id_),
       config_(config),
       object_directory_(object_directory),
       object_store_internal_(std::make_unique<ObjectStoreRunner>(
@@ -136,6 +138,7 @@ ObjectManager::ObjectManager(
     available_memory = 0;
   }
   pull_manager_.reset(new PullManager(self_node_id_,
+                                      self_shm_pool_id_,
                                       object_is_local,
                                       send_pull_request,
                                       cancel_pull_request,
@@ -241,13 +244,15 @@ uint64_t ObjectManager::Pull(const std::vector<rpc::ObjectReference> &object_ref
                                 const std::string &spilled_url,
                                 const NodeID &spilled_node_id,
                                 bool pending_creation,
-                                size_t object_size) {
+                                size_t object_size,
+                                const std::string &shm_pool_id) {
     pull_manager_->OnLocationChange(object_id,
                                     client_ids,
                                     spilled_url,
                                     spilled_node_id,
                                     pending_creation,
-                                    object_size);
+                                    object_size,
+                                    shm_pool_id);
   };
 
   for (const auto &ref : objects_to_locate) {

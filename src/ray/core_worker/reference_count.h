@@ -807,6 +807,8 @@ class ReferenceCounter : public ReferenceCounterInterface,
 
     /// Whether or not this object was spilled.
     bool did_spill = false;
+
+    std::string shm_pool_id;
   };
 
   using ReferenceTable = absl::flat_hash_map<ObjectID, Reference>;

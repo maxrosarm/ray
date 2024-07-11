@@ -22,6 +22,7 @@ namespace ray {
 
 PullManager::PullManager(
     NodeID &self_node_id,
+    std::string &shm_pool_id_,
     const std::function<bool(const ObjectID &)> object_is_local,
     const std::function<void(const ObjectID &, const NodeID &)> send_pull_request,
     const std::function<void(const ObjectID &)> cancel_pull_request,
@@ -33,6 +34,7 @@ PullManager::PullManager(
     std::function<std::unique_ptr<RayObject>(const ObjectID &)> pin_object,
     std::function<std::string(const ObjectID &)> get_locally_spilled_object_url)
     : self_node_id_(self_node_id),
+      self_shm_pool_id_(shm_pool_id_),
       object_is_local_(object_is_local),
       send_pull_request_(send_pull_request),
       cancel_pull_request_(cancel_pull_request),
@@ -360,7 +362,8 @@ void PullManager::OnLocationChange(const ObjectID &object_id,
                                    const std::string &spilled_url,
                                    const NodeID &spilled_node_id,
                                    bool pending_creation,
-                                   size_t object_size) {
+                                   size_t object_size,
+                                   const std::string &shm_pool_id) {
   // Exit if the Pull request has already been fulfilled or canceled.
   auto it = object_pull_requests_.find(object_id);
   if (it == object_pull_requests_.end()) {
@@ -383,6 +386,7 @@ void PullManager::OnLocationChange(const ObjectID &object_id,
       it->second.client_locations.push_back(client_id);
     }
   }
+  it->second.shm_pool_id = shm_pool_id;
   it->second.spilled_url = spilled_url;
   it->second.spilled_node_id = spilled_node_id;
   it->second.pending_object_creation = pending_creation;
@@ -430,8 +434,9 @@ void PullManager::OnLocationChange(const ObjectID &object_id,
                    << ", num bytes being pulled is now " << num_bytes_being_pulled_;
   }
 
-  RAY_LOG(DEBUG) << object_id << " OnLocationChange " << spilled_url << " num clients "
-                 << client_ids.size();
+  RAY_LOG(INFO) << object_id << " OnLocationChange " << spilled_url << " num clients "
+                 << client_ids.size() << " shm pool id: " << shm_pool_id;
+
 
   {
     absl::MutexLock lock(&active_objects_mu_);
@@ -456,6 +461,16 @@ void PullManager::TryToMakeObjectLocal(const ObjectID &object_id) {
     return;
   }
 
+  // auto it = object_pull_requests_.find(object_id);
+  auto shm_pool_id = request.shm_pool_id; 
+  if(shm_pool_id == self_shm_pool_id_ && !request.spilled_url.empty()){
+    // TODO(maxwell) issue a spill given a URL to a pool
+    RAY_LOG(INFO) << "Restoring spilled object from pool\n";
+  }
+  else{
+    RAY_LOG(INFO) << "Tried to restore from the pool, but could not find the object_id in object_pull_requests_.\n";
+  } // else
+
   // Try to pull the object from a remote node. If the object is spilled on the local
   // disk of the remote node, it will be restored by PushManager prior to pushing.
   bool did_pull = PullFromRandomLocation(object_id);
@@ -468,6 +483,7 @@ void PullManager::TryToMakeObjectLocal(const ObjectID &object_id) {
   // first check local spilled objects
   std::string direct_restore_url = get_locally_spilled_object_url_(object_id);
   if (direct_restore_url.empty()) {
+    // TODO(maxwell) what is this conditional doing?
     if (!request.spilled_url.empty() && request.spilled_node_id.IsNil()) {
       direct_restore_url = request.spilled_url;
     }
@@ -509,14 +525,23 @@ bool PullManager::PullFromRandomLocation(const ObjectID &object_id) {
   if (it == object_pull_requests_.end()) {
     return false;
   }
-
+  // TODO(maxwell) 
   auto &node_vector = it->second.client_locations;
   auto &spilled_node_id = it->second.spilled_node_id;
+
+  RAY_LOG(INFO) << "THIS IS THE SPILLED OBJECT URL --- " << it->second.spilled_url << " ---\n";
+  RAY_LOG(INFO) << "THIS IS THE SPILLED NODE ID --- " << spilled_node_id << " ---\n";
+
+  if(!node_vector.empty()){
+    for(auto node_id  : node_vector){
+      RAY_LOG(INFO) << "THESE ARE THE REMOTE NODE IDS ---" << node_id << "---\n";
+    }
+  }
 
   if (node_vector.empty()) {
     // Pull from remote node, it will be restored prior to push.
     if (!spilled_node_id.IsNil() && spilled_node_id != self_node_id_) {
-      RAY_LOG(DEBUG) << "Sending pull request from " << self_node_id_
+      RAY_LOG(INFO) << "Sending pull request from " << self_node_id_
                      << " to spilled location at " << spilled_node_id << " of object "
                      << object_id;
       send_pull_request_(object_id, spilled_node_id);

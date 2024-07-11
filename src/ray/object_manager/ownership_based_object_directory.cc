@@ -19,13 +19,15 @@
 namespace ray {
 
 OwnershipBasedObjectDirectory::OwnershipBasedObjectDirectory(
-    instrumented_io_context &io_service,
+    const std::string &shm_pool_id,
+    instrumented_io_context &io_service,  
     std::shared_ptr<gcs::GcsClient> &gcs_client,
     pubsub::SubscriberInterface *object_location_subscriber,
     rpc::CoreWorkerClientPool *owner_client_pool,
     int64_t max_object_report_batch_size,
     std::function<void(const ObjectID &, const rpc::ErrorType &)> mark_as_failed)
-    : io_service_(io_service),
+    : self_shm_pool_id_(shm_pool_id),
+      io_service_(io_service), 
       gcs_client_(gcs_client),
       client_call_manager_(io_service),
       object_location_subscriber_(object_location_subscriber),
@@ -50,11 +52,13 @@ void FilterRemovedNodes(std::shared_ptr<gcs::GcsClient> gcs_client,
 /// Update object location data based on response from the owning core worker.
 bool UpdateObjectLocations(const rpc::WorkerObjectLocationsPubMessage &location_info,
                            std::shared_ptr<gcs::GcsClient> gcs_client,
-                           std::unordered_set<NodeID> *node_ids,
+                           std::unordered_set<NodeID> *node_ids, // old node_ids from worker?
                            std::string *spilled_url,
                            NodeID *spilled_node_id,
                            bool *pending_creation,
-                           size_t *object_size) {
+                           size_t *object_size,
+                           std::string *shm_pool_id // the old shm_pool_id seen locally
+                           ) {
   bool is_updated = false;
   std::unordered_set<NodeID> new_node_ids;
   // The size can be 0 if the update was a deletion. The size can also be unset if the
@@ -75,17 +79,21 @@ bool UpdateObjectLocations(const rpc::WorkerObjectLocationsPubMessage &location_
     *node_ids = new_node_ids;
     is_updated = true;
   }
+  // TODO(maxwell) double check if this logic is correct, confounded shm_pool_id with spilled_url
   const std::string &new_spilled_url = location_info.spilled_url();
+  const std::string &new_shm_pool_id = location_info.shm_pool_id();
   if (new_spilled_url != *spilled_url) {
     const auto new_spilled_node_id = NodeID::FromBinary(location_info.spilled_node_id());
-    RAY_LOG(DEBUG) << "Received object spilled to " << new_spilled_url << " spilled on "
-                   << new_spilled_node_id;
+    RAY_LOG(INFO) << "Received object spilled to " << new_spilled_url << " spilled on "
+                   << new_spilled_node_id << " with pool_id: " << new_shm_pool_id << " ---\n";
     if (gcs_client->Nodes().IsRemoved(new_spilled_node_id)) {
       *spilled_url = "";
       *spilled_node_id = NodeID::Nil();
+      *shm_pool_id = ""; // update to empty
     } else {
       *spilled_url = new_spilled_url;
       *spilled_node_id = new_spilled_node_id;
+      *shm_pool_id = new_shm_pool_id; // update to new shm_pool_id
     }
     is_updated = true;
   }
@@ -293,16 +301,18 @@ void OwnershipBasedObjectDirectory::ObjectLocationSubscriptionCallback(
                                                 &it->second.spilled_url,
                                                 &it->second.spilled_node_id,
                                                 &it->second.pending_creation,
-                                                &it->second.object_size);
+                                                &it->second.object_size,
+                                                &it->second.shm_pool_id);
 
   // If the lookup has failed, that means the object is lost. Trigger the callback in this
   // case to handle failure properly.
   if (location_updated || location_lookup_failed) {
-    RAY_LOG(DEBUG) << "Pushing location updates to subscribers for object " << object_id
+    RAY_LOG(INFO) << "Pushing location updates to subscribers for object " << object_id
                    << ": " << it->second.current_object_locations.size()
                    << " locations, spilled_url: " << it->second.spilled_url
                    << ", spilled node ID: " << it->second.spilled_node_id
                    << ", object size: " << it->second.object_size
+                   << ", shm pool ID: " << it->second.shm_pool_id
                    << ", lookup failed: " << location_lookup_failed;
     metrics_num_object_location_updates_++;
     cum_metrics_num_object_location_updates_++;
@@ -322,7 +332,8 @@ void OwnershipBasedObjectDirectory::ObjectLocationSubscriptionCallback(
            it->second.spilled_url,
            it->second.spilled_node_id,
            it->second.pending_creation,
-           it->second.object_size);
+           it->second.object_size,
+           it->second.shm_pool_id);
     }
   }
 }
@@ -331,8 +342,12 @@ ray::Status OwnershipBasedObjectDirectory::SubscribeObjectLocations(
     const UniqueID &callback_id,
     const ObjectID &object_id,
     const rpc::Address &owner_address,
-    const OnLocationsFound &callback) {
+    const OnLocationsFound &callback // callback of interest
+    ) {
   auto it = listeners_.find(object_id);
+
+  // TODO(maxwell) don't really understand whats going here, maybe sending a message to stop listening?
+  // Don't think this area is needed, will skip
   if (it == listeners_.end()) {
     // Create an object eviction subscription message.
     auto request = std::make_unique<rpc::WorkerObjectLocationsSubMessage>();
@@ -403,15 +418,20 @@ ray::Status OwnershipBasedObjectDirectory::SubscribeObjectLocations(
     auto &spilled_node_id = listener_state.spilled_node_id;
     bool pending_creation = listener_state.pending_creation;
     auto object_size = listener_state.object_size;
+    auto &shm_pool_id = listener_state.shm_pool_id;
+
     RAY_LOG(DEBUG) << "Already subscribed to object's locations, pushing location "
                       "updates to subscribers for object "
                    << object_id << ": " << locations.size()
                    << " locations, spilled_url: " << spilled_url
                    << ", spilled node ID: " << spilled_node_id
-                   << ", object size: " << object_size;
+                   << ", object size: " << object_size 
+                   << ", shm pool ID: " << shm_pool_id << "/n";
     // We post the callback to the event loop in order to avoid mutating data
     // structures shared with the caller and potentially invalidating caller
     // iterators. See https://github.com/ray-project/ray/issues/2959.
+
+    // TODO(maxwell) idk why this is here
     io_service_.post(
         [callback,
          locations,
@@ -419,13 +439,15 @@ ray::Status OwnershipBasedObjectDirectory::SubscribeObjectLocations(
          spilled_node_id,
          pending_creation,
          object_size,
-         object_id]() {
+         object_id,
+         shm_pool_id]() {
           callback(object_id,
                    locations,
                    spilled_url,
                    spilled_node_id,
                    pending_creation,
-                   object_size);
+                   object_size,
+                   shm_pool_id);
         },
         "ObjectDirectory.SubscribeObjectLocations");
   }
@@ -483,6 +505,7 @@ void OwnershipBasedObjectDirectory::HandleNodeRemoved(const NodeID &node_id) {
       listener.spilled_node_id = NodeID::Nil();
       listener.spilled_url = "";
       updated = true;
+      listener.shm_pool_id = "";
     }
 
     if (updated) {
@@ -496,7 +519,8 @@ void OwnershipBasedObjectDirectory::HandleNodeRemoved(const NodeID &node_id) {
              listener.spilled_url,
              listener.spilled_node_id,
              listener.pending_creation,
-             listener.object_size);
+             listener.object_size,
+             listener.shm_pool_id);
       }
     }
   }

@@ -19,6 +19,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <string>
 
 #include "absl/container/flat_hash_map.h"
 #include "ray/common/asio/instrumented_io_context.h"
@@ -43,6 +44,7 @@ class OwnershipBasedObjectDirectory : public IObjectDirectory {
   /// \param gcs_client A Ray GCS client to request object and node
   /// information from.
   OwnershipBasedObjectDirectory(
+      const std::string &shm_pool_id,
       instrumented_io_context &io_service,
       std::shared_ptr<gcs::GcsClient> &gcs_client,
       pubsub::SubscriberInterface *object_location_subscriber,
@@ -113,7 +115,11 @@ class OwnershipBasedObjectDirectory : public IObjectDirectory {
     bool subscribed;
     /// The address of the owner.
     rpc::Address owner_address;
+
+    std::string shm_pool_id;
   };
+
+  std::string self_shm_pool_id_;
 
   /// Reference to the event loop.
   instrumented_io_context &io_service_;
