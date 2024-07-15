@@ -463,12 +463,19 @@ void PullManager::TryToMakeObjectLocal(const ObjectID &object_id) {
 
   // auto it = object_pull_requests_.find(object_id);
   auto shm_pool_id = request.shm_pool_id; 
+  RAY_CHECK(!shm_pool_id.empty()) << "pool_id was empty, exiting\n";
   if(shm_pool_id == self_shm_pool_id_ && !request.spilled_url.empty()){
     // TODO(maxwell) issue a spill given a URL to a pool
     RAY_LOG(INFO) << "Restoring spilled object from pool\n";
   }
   else{
-    RAY_LOG(INFO) << "Tried to restore from the pool, but could not find the object_id in object_pull_requests_.\n";
+    RAY_LOG(INFO) << "Tried to restore from the pool with request id: " 
+    << shm_pool_id 
+    << " and with URL:\n"
+    << request.spilled_url 
+    << "\nbut could not find the object_id in object_pull_requests_.\n";
+
+
   } // else
 
   // Try to pull the object from a remote node. If the object is spilled on the local
@@ -528,15 +535,6 @@ bool PullManager::PullFromRandomLocation(const ObjectID &object_id) {
   // TODO(maxwell) 
   auto &node_vector = it->second.client_locations;
   auto &spilled_node_id = it->second.spilled_node_id;
-
-  RAY_LOG(INFO) << "THIS IS THE SPILLED OBJECT URL --- " << it->second.spilled_url << " ---\n";
-  RAY_LOG(INFO) << "THIS IS THE SPILLED NODE ID --- " << spilled_node_id << " ---\n";
-
-  if(!node_vector.empty()){
-    for(auto node_id  : node_vector){
-      RAY_LOG(INFO) << "THESE ARE THE REMOTE NODE IDS ---" << node_id << "---\n";
-    }
-  }
 
   if (node_vector.empty()) {
     // Pull from remote node, it will be restored prior to push.

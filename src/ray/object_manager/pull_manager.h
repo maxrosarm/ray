@@ -217,6 +217,7 @@ class PullManager {
       std::stringstream result;
       result << "ObjectPullRequest{";
       result << "locations: " << debug_string(client_locations);
+      result << ", pool_id: " << shm_pool_id;
       result << ", spilled url: " << spilled_url;
       result << ", spilled node id: " << spilled_node_id;
       result << ", pending creation: " << pending_object_creation;

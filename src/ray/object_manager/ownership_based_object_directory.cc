@@ -196,6 +196,9 @@ void OwnershipBasedObjectDirectory::ReportObjectSpilled(
   update.mutable_spilled_location_update()->set_spilled_url(spilled_url);
   update.mutable_spilled_location_update()->set_spilled_to_local_storage(
       spilled_to_local_storage);
+  update.mutable_spilled_location_update()->set_shm_pool_id(
+    self_shm_pool_id_
+  );
   if (!generator_id.IsNil()) {
     update.set_generator_id(generator_id.Binary());
   }

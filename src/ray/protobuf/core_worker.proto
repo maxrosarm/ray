@@ -210,6 +210,8 @@ message ObjectSpilledLocationUpdate {
   string spilled_url = 3;
   // Whether the object is spilled to local storage or cloud storage.
   bool spilled_to_local_storage = 4;
+  // pool id
+  string shm_pool_id = 5;
 }
 
 message ObjectLocationUpdate {
