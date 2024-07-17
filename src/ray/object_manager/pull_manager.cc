@@ -461,21 +461,22 @@ void PullManager::TryToMakeObjectLocal(const ObjectID &object_id) {
     return;
   }
 
-  // auto it = object_pull_requests_.find(object_id);
-  auto shm_pool_id = request.shm_pool_id; 
-  RAY_CHECK(!shm_pool_id.empty()) << "pool_id was empty, exiting\n";
-  if(shm_pool_id == self_shm_pool_id_ && !request.spilled_url.empty()){
+  auto it = object_pull_requests_.find(object_id);
+  auto shm_pool_id = it->second.shm_pool_id;
+  RAY_LOG(DEBUG) << "THIS IS SHM_POOL_ID WHEN TryToMakeObjectLocal: " << shm_pool_id;
+
+  //RAY_CHECK(!shm_pool_id.empty()) << "pool_id was empty, exiting\n";
+  RAY_CHECK(shm_pool_id == "BROOKLYN") << "BROOKLYN!\n";
+  if((shm_pool_id == self_shm_pool_id_ && !request.spilled_url.empty())){
     // TODO(maxwell) issue a spill given a URL to a pool
-    RAY_LOG(INFO) << "Restoring spilled object from pool\n";
+    RAY_LOG(DEBUG) << "Restoring spilled object from pool\n";
   }
   else{
-    RAY_LOG(INFO) << "Tried to restore from the pool with request id: " 
+    RAY_LOG(DEBUG) << "Tried to restore from the pool with request id: " 
     << shm_pool_id 
     << " and with URL:\n"
     << request.spilled_url 
     << "\nbut could not find the object_id in object_pull_requests_.\n";
-
-
   } // else
 
   // Try to pull the object from a remote node. If the object is spilled on the local

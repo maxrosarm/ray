@@ -192,6 +192,9 @@ void OwnershipBasedObjectDirectory::ReportObjectSpilled(
 
   const bool existing_object = location_buffers_[worker_id].second.contains(object_id);
   rpc::ObjectLocationUpdate &update = location_buffers_[worker_id].second[object_id];
+
+  RAY_LOG(DEBUG) << "Setting update shm_pool_id to " << self_shm_pool_id_;
+  
   update.set_object_id(object_id.Binary());
   update.mutable_spilled_location_update()->set_spilled_url(spilled_url);
   update.mutable_spilled_location_update()->set_spilled_to_local_storage(
@@ -358,6 +361,7 @@ ray::Status OwnershipBasedObjectDirectory::SubscribeObjectLocations(
     request->set_object_id(object_id.Binary());
 
     auto msg_published_callback = [this, object_id](const rpc::PubMessage &pub_message) {
+      RAY_LOG(DEBUG) << "This is msg_published_callback";
       RAY_CHECK(pub_message.has_worker_object_locations_message());
       const auto &location_info = pub_message.worker_object_locations_message();
       ObjectLocationSubscriptionCallback(

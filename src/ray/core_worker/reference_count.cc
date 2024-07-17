@@ -786,6 +786,7 @@ void ReferenceCounter::ReleasePlasmaObject(ReferenceTable::iterator it) {
     it->second.spilled = false;
     it->second.spilled_url = "";
     it->second.spilled_node_id = NodeID::Nil();
+    it->second.shm_pool_id = "";
   }
 }
 
@@ -1403,7 +1404,7 @@ bool ReferenceCounter::HandleObjectSpilled(const ObjectID &object_id,
     // we should not add this spill URL as a location.
     return false;
   }
-
+  it->second.shm_pool_id = "BRONX";
   it->second.spilled = true;
   it->second.did_spill = true;
   bool spilled_location_alive =

@@ -235,14 +235,16 @@ class ObjectLocation {
                  bool is_spilled,
                  std::string spilled_url,
                  NodeID spilled_node_id,
-                 bool did_spill)
+                 bool did_spill,
+                 std::string shm_pool_id)
       : primary_node_id_(primary_node_id),
         object_size_(object_size),
         node_ids_(std::move(node_ids)),
         is_spilled_(is_spilled),
         spilled_url_(std::move(spilled_url)),
         spilled_node_id_(spilled_node_id),
-        did_spill_(did_spill) {}
+        did_spill_(did_spill),
+        shm_pool_id(shm_pool_id) {}
 
   const NodeID &GetPrimaryNodeID() const { return primary_node_id_; }
 
@@ -275,6 +277,8 @@ class ObjectLocation {
   const NodeID spilled_node_id_;
   /// Whether or not this object was spilled.
   const bool did_spill_;
+
+  const std::string shm_pool_id;
 };
 
 }  // namespace core

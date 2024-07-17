@@ -105,7 +105,8 @@ ObjectLocation CreateObjectLocation(
                         is_spilled,
                         object_info.spilled_url(),
                         NodeID::FromBinary(object_info.spilled_node_id()),
-                        object_info.did_spill());
+                        object_info.did_spill(),
+                        object_info.shm_pool_id());
 }
 
 std::optional<ObjectLocation> TryGetLocalObjectLocation(
