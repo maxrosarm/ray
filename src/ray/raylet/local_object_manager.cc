@@ -150,8 +150,6 @@ void LocalObjectManager::FlushFreeObjects() {
   last_free_objects_at_ms_ = current_time_ms();
 }
 
-
-// miami 
 // definition of spill_object_callback
 void LocalObjectManager::SpillObjectUptoMaxThroughput() {
   if (RayConfig::instance().object_spilling_config().empty()) {
@@ -381,7 +379,6 @@ void LocalObjectManager::SpillObjectsInternal(
   }
 }
 
-// miami
 void LocalObjectManager::OnObjectSpilled(const std::vector<ObjectID> &object_ids,
                                          const rpc::SpillObjectsReply &worker_reply) {
   for (size_t i = 0; i < static_cast<size_t>(worker_reply.spilled_objects_url_size());

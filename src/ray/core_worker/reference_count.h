@@ -810,7 +810,7 @@ class ReferenceCounter : public ReferenceCounterInterface,
     /// Whether or not this object was spilled.
     bool did_spill = false;
 
-    std::string shm_pool_id = "BROOKLYN";
+    std::string shm_pool_id = "";
   };
 
   using ReferenceTable = absl::flat_hash_map<ObjectID, Reference>;
@@ -1003,7 +1003,7 @@ class ReferenceCounter : public ReferenceCounterInterface,
                                     std::vector<ObjectID> *deleted)
       ABSL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
-  std::string shm_pool_id_ = "MIAMI";
+  std::string shm_pool_id_ = "";
 
   /// Address of our RPC server. This is used to determine whether we own a
   /// given object or not, by comparing our WorkerID with the WorkerID of the

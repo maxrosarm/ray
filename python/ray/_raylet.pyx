@@ -3736,7 +3736,6 @@ cdef class CoreWorker:
                          .ExperimentalChannelReadRelease(c_object_ids))
         check_status(op_status)
 
-    # miami
     def put_serialized_object_and_increment_local_ref(
             self, serialized_object,
             ObjectRef object_ref=None,

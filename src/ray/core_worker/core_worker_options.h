@@ -69,7 +69,7 @@ struct CoreWorkerOptions {
 
   CoreWorkerOptions()
       : 
-        shm_pool_id("BROOKLYN"),
+        shm_pool_id(""),
         store_socket(""),
         raylet_socket(""),
         enable_logging(false),

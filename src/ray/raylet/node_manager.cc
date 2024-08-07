@@ -2233,7 +2233,6 @@ void NodeManager::FinishAssignedActorCreationTask(WorkerInterface &worker,
     RAY_CHECK(job_config);
   }
 }
-// miami
 void NodeManager::SpillIfOverPrimaryObjectsThreshold() {
   // Trigger object spilling if current usage is above the specified threshold.
   const float allocated_percentage =
