@@ -3300,7 +3300,7 @@ def check_health(address: str, timeout=2, skip_version_check=False):
 
 cdef class CoreWorker:
 
-    def __cinit__(self, worker_type, store_socket, raylet_socket,
+    def __cinit__(self, shm_pool_id, worker_type, store_socket, raylet_socket,
                   JobID job_id, GcsClientOptions gcs_options, log_dir,
                   node_ip_address, node_manager_port, raylet_ip_address,
                   local_mode, driver_name, stdout_file, stderr_file,
@@ -3324,6 +3324,7 @@ cdef class CoreWorker:
             options.worker_type = WORKER_TYPE_RESTORE_WORKER
         else:
             raise ValueError(f"Unknown worker type: {worker_type}")
+        options.shm_pool_id = shm_pool_id
         options.language = LANGUAGE_PYTHON
         options.store_socket = store_socket.encode("ascii")
         options.raylet_socket = raylet_socket.encode("ascii")
@@ -3735,6 +3736,7 @@ cdef class CoreWorker:
                          .ExperimentalChannelReadRelease(c_object_ids))
         check_status(op_status)
 
+    # miami
     def put_serialized_object_and_increment_local_ref(
             self, serialized_object,
             ObjectRef object_ref=None,

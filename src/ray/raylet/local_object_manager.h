@@ -87,7 +87,7 @@ class LocalObjectManager {
   /// \param objects Pointers to the objects to be pinned. The pointer should
   /// be kept in scope until the object can be released.
   /// \param owner_address The owner of the objects to be pinned.
-  /// \param generator_id When it's set, this means that it was a dynamically
+  /// \param generator_id When it set, this means that it was a dynamically
   /// created ObjectID, so we need to notify the owner of the outer ObjectID
   /// that should already be owned by the same worker. If the outer ObjectID is
   /// still in scope, then the owner can add the dynamically created ObjectID

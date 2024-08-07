@@ -166,6 +166,7 @@ PlasmaError PlasmaStore::HandleCreateObjectRequest(const std::shared_ptr<Client>
     return PlasmaError::OutOfMemory;
   }
 
+  // main handler for creating objects here
   auto error = CreateObject(object_info, source, client, fallback_allocator, object);
   if (error == PlasmaError::OutOfMemory) {
     RAY_LOG(DEBUG) << "Not enough memory to create the object " << object_info.object_id

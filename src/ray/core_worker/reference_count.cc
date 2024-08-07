@@ -1404,7 +1404,11 @@ bool ReferenceCounter::HandleObjectSpilled(const ObjectID &object_id,
     // we should not add this spill URL as a location.
     return false;
   }
-  it->second.shm_pool_id = "BRONX";
+  it->second.shm_pool_id = shm_pool_id_; 
+
+  RAY_LOG(DEBUG) << "Broadcasting shm_pool_id of " << it->second.shm_pool_id << " in ReferenceCounter::HandleObjectSpilled";
+  RAY_CHECK(it->second.shm_pool_id != "MIAMI") << "MIAMI IN ReferenceCounter::HandleObjectSpilled";
+
   it->second.spilled = true;
   it->second.did_spill = true;
   bool spilled_location_alive =

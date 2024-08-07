@@ -112,6 +112,7 @@ NodeManager::NodeManager(
       gcs_client_(gcs_client),
       shutdown_raylet_gracefully_(shutdown_raylet_gracefully),
       worker_pool_(
+          config.shm_pool_id_, 
           io_service,
           self_node_id_,
           config.node_manager_address,
@@ -2232,7 +2233,7 @@ void NodeManager::FinishAssignedActorCreationTask(WorkerInterface &worker,
     RAY_CHECK(job_config);
   }
 }
-
+// miami
 void NodeManager::SpillIfOverPrimaryObjectsThreshold() {
   // Trigger object spilling if current usage is above the specified threshold.
   const float allocated_percentage =

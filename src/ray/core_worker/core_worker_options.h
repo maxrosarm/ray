@@ -68,7 +68,9 @@ struct CoreWorkerOptions {
       int64_t generator_backpressure_num_objects)>;
 
   CoreWorkerOptions()
-      : store_socket(""),
+      : 
+        shm_pool_id("BROOKLYN"),
+        store_socket(""),
         raylet_socket(""),
         enable_logging(false),
         log_dir(""),
@@ -101,6 +103,8 @@ struct CoreWorkerOptions {
         entrypoint(""),
         worker_launch_time_ms(-1),
         worker_launched_time_ms(-1) {}
+
+  std::string shm_pool_id;
 
   /// Type of this worker (i.e., DRIVER or WORKER).
   WorkerType worker_type;

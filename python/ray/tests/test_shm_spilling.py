@@ -1,12 +1,8 @@
 import json
 import platform
-import random
 import re
-import shutil
 import sys
-import time
 import zlib
-from collections import defaultdict
 
 import numpy as np
 import pytest
@@ -18,23 +14,6 @@ from ray.tests.test_object_spilling import assert_no_thrashing, is_dir_empty
 
 # Note: Disk write speed can be as low as 6 MiB/s in AWS Mac instances, so we have to
 # increase the timeout.
-pytestmark = [pytest.mark.timeout(900 if platform.system() == "Darwin" else 180)]
-
-@pytest.mark.skipif(True, reason="Not needed at the moment")
-def _check_spilled(num_objects_spilled=0):
-    def ok():
-        s = ray._private.internal_api.memory_summary(stats_only=True)
-        if num_objects_spilled == 0:
-            return "Spilled " not in s
-
-        m = re.search(r"Spilled (\d+) MiB, (\d+) objects", s)
-        if m is not None:
-            actual_num_objects = int(m.group(2))
-            return actual_num_objects >= num_objects_spilled
-
-        return False
-
-    wait_for_condition(ok, timeout=90, retry_interval_ms=5000)
 
 # have to figure out which node spills what and which pulls 
 
@@ -47,8 +26,8 @@ def test_pull_spilled_object(
     # Head node.
     cluster.add_node(
         num_cpus=1,
-        resources={"pool_id_0": 1},
-        object_store_memory=75 * 1024 * 1024,
+        resources={"pool_id_0": 1, 'a':1},
+        object_store_memory= 75 * 1024 * 1024, # 75 * 1024 * 1024
         _system_config={
             "max_io_workers": 2,
             "min_spilling_size": 1 * 1024 * 1024,
@@ -61,26 +40,31 @@ def test_pull_spilled_object(
 
     # add 1 worker node
     cluster.add_node(
-        num_cpus=1, resources={"pool_id_1": 1}, object_store_memory=75 * 1024 * 1024
+        num_cpus=1, resources={"pool_id_0": 1, 'b':1}, object_store_memory=75 * 1024 * 1024
     )
     cluster.wait_for_nodes()
 
     # create the objects on the remote node?
-    @ray.remote(num_cpus=1, resources={"pool_id_1": 1})
+    @ray.remote(num_cpus=1, resources={"b": 1})
     def create_objects():
         results = []
-        for size in range(5):
+        # TODO(maxwell) less than three here will mess up the program???
+        # ray.get below here does nothing at all
+        data_to_spill = [10 for _ in range(5)]
+        for size in data_to_spill:
             arr = np.random.rand(size * 1024 * 1024)
             hash_value = zlib.crc32(arr.tobytes())
             results.append([ray.put(arr), hash_value])
+        
         # ensure the objects are spilled
-        arr = np.random.rand(5 * 1024 * 1024)
+        # np.random.rand(5 * 1024 * 1024) this puts about 41.943152 MB in storage
+        arr = np.random.rand(5 * 1024 * 1024) # SHOULD SEE EXACTLY 1 RESTORE FROM POOL ON RAYLET 1
         ray.get(ray.put(arr))
         ray.get(ray.put(arr))
         return results
 
     # get the objects and place into head node?
-    @ray.remote(num_cpus=1, resources={"pool_id_0": 1})
+    @ray.remote(num_cpus=1, resources={"a": 1})
     def get_object(arr):
         return zlib.crc32(arr.tobytes())
 
@@ -91,6 +75,12 @@ def test_pull_spilled_object(
     for value_ref, hash_value in results:
         hash_value1 = ray.get(get_object.remote(value_ref))
         assert hash_value == hash_value1
+
+    # create the objects on the remote node?
+    #results2 = ray.get(create_objects.remote())
+    #for value_ref, hash_value in results2:
+    #    hash_value1 = ray.get(get_object.remote(value_ref))
+    #    assert hash_value == hash_value1
 
 if __name__ == "__main__":
     import os
@@ -113,7 +103,8 @@ if __name__ == "__main__":
             "type": "filesystem",
             "params": { 
                     "directory_path": [
-                    "/tmp/spill_test",
+                    "/dev/shm/spill_test"
+                    #"/tmp/spill_test",
                     #"/dev/shm/spill",
                     #"/dev/shm/spill_1",
                     #"/dev/shm/spill_2",
@@ -122,8 +113,3 @@ if __name__ == "__main__":
             }
         )
         test_pull_spilled_object(local_cluster, (object_spill_config,None), False)
-
-    elif os.environ.get("PARALLEL_CI"):
-        sys.exit(pytest.main(["-n", "auto", "--boxed", "-vs", __file__]))
-    else:
-        sys.exit(pytest.main(["-sv", __file__]))

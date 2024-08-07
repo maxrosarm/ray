@@ -306,6 +306,7 @@ void PullManager::UpdatePullsBasedOnAvailableMemory(int64_t num_bytes_available)
     absl::MutexLock lock(&active_objects_mu_);
     for (const auto &obj_id : objects_to_pull) {
       if (object_ids_to_cancel.count(obj_id) == 0) {
+        RAY_LOG(DEBUG) << "TryToMakeObjectLocal called in UpdatePullsBasedOnAvailableMemory";
         TryToMakeObjectLocal(obj_id);
       }
     }
@@ -434,17 +435,23 @@ void PullManager::OnLocationChange(const ObjectID &object_id,
                    << ", num bytes being pulled is now " << num_bytes_being_pulled_;
   }
 
-  RAY_LOG(INFO) << object_id << " OnLocationChange " << spilled_url << " num clients "
+  RAY_LOG(DEBUG) << object_id << " OnLocationChange " << spilled_url << " num clients "
                  << client_ids.size() << " shm pool id: " << shm_pool_id;
 
 
   {
     absl::MutexLock lock(&active_objects_mu_);
+    RAY_LOG(DEBUG) << "TryToMakeObjectLocal called in OnLocationChange";
     TryToMakeObjectLocal(object_id);
   }
 }
 
 void PullManager::TryToMakeObjectLocal(const ObjectID &object_id) {
+
+  RAY_LOG(DEBUG) << "Trying to make object " << object_id 
+                 << " local with pool id " << self_shm_pool_id_
+                 << " on node " << self_node_id_;
+
   // The object is already local; abort.
   if (object_is_local_(object_id)) {
     return;
@@ -461,15 +468,24 @@ void PullManager::TryToMakeObjectLocal(const ObjectID &object_id) {
     return;
   }
 
-  auto it = object_pull_requests_.find(object_id);
-  auto shm_pool_id = it->second.shm_pool_id;
-  RAY_LOG(DEBUG) << "THIS IS SHM_POOL_ID WHEN TryToMakeObjectLocal: " << shm_pool_id;
+  // FIGURE OUT WHY active_object_pull_requests_ GETS OLD OBJ IDS AFTER SPILLING TO POOL!
 
-  //RAY_CHECK(!shm_pool_id.empty()) << "pool_id was empty, exiting\n";
-  RAY_CHECK(shm_pool_id == "BROOKLYN") << "BROOKLYN!\n";
+  auto shm_pool_id = request.shm_pool_id;
   if((shm_pool_id == self_shm_pool_id_ && !request.spilled_url.empty())){
-    // TODO(maxwell) issue a spill given a URL to a pool
     RAY_LOG(DEBUG) << "Restoring spilled object from pool\n";
+
+    UpdateRetryTimer(request, object_id);
+    cancel_pull_request_(object_id);
+    restore_spilled_object_(object_id,
+                            request.object_size,
+                            request.spilled_url,
+                            [object_id](const ray::Status &status) {
+                              if (!status.ok()) {
+                                RAY_LOG(ERROR) << "Pool Object restore for " << object_id
+                                               << " failed, will retry later: " << status;
+                              }
+                            });
+    return;
   }
   else{
     RAY_LOG(DEBUG) << "Tried to restore from the pool with request id: " 
@@ -477,6 +493,8 @@ void PullManager::TryToMakeObjectLocal(const ObjectID &object_id) {
     << " and with URL:\n"
     << request.spilled_url 
     << "\nbut could not find the object_id in object_pull_requests_.\n";
+
+    //RAY_CHECK(2==0) << "Purposely faulting in else statement to get stack trace";
   } // else
 
   // Try to pull the object from a remote node. If the object is spilled on the local
@@ -529,11 +547,13 @@ void PullManager::TryToMakeObjectLocal(const ObjectID &object_id) {
 }
 
 bool PullManager::PullFromRandomLocation(const ObjectID &object_id) {
+  RAY_LOG(DEBUG) << "Calling PullFromRandomLocation";
+  RAY_CHECK(1==0) << "Purposely faulting here to get stack trace";
+
   auto it = object_pull_requests_.find(object_id);
   if (it == object_pull_requests_.end()) {
     return false;
   }
-  // TODO(maxwell) 
   auto &node_vector = it->second.client_locations;
   auto &spilled_node_id = it->second.spilled_node_id;
 
@@ -599,6 +619,7 @@ void PullManager::Tick() {
   absl::MutexLock lock(&active_objects_mu_);
   for (auto &pair : active_object_pull_requests_) {
     const auto &object_id = pair.first;
+    RAY_LOG(DEBUG) << "TryToMakeObjectLocal called in Tick";
     TryToMakeObjectLocal(object_id);
   }
 }

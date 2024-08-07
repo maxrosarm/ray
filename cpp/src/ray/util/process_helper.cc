@@ -162,7 +162,12 @@ void ProcessHelper::RayStart(CoreWorkerOptions::TaskExecutionCallback callback) 
   std::string serialized_job_config;
   RAY_CHECK(job_config.SerializeToString(&serialized_job_config));
   options.serialized_job_config = serialized_job_config;
+
+
+  options.shm_pool_id = ConfigInternal::Instance().shm_pool_id;
+
   CoreWorkerProcess::Initialize(options);
+
 }
 
 void ProcessHelper::RayStop() {

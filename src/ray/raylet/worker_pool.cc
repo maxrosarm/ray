@@ -68,7 +68,9 @@ namespace ray {
 
 namespace raylet {
 
-WorkerPool::WorkerPool(instrumented_io_context &io_service,
+WorkerPool::WorkerPool(
+                       const std::string shm_pool_id,
+                       instrumented_io_context &io_service,
                        const NodeID node_id,
                        const std::string node_address,
                        const std::function<int64_t()> &get_num_cpus_available,
@@ -83,7 +85,8 @@ WorkerPool::WorkerPool(instrumented_io_context &io_service,
                        std::function<void()> starting_worker_timeout_callback,
                        int ray_debugger_external,
                        const std::function<double()> get_time)
-    : worker_startup_token_counter_(0),
+    : shm_pool_id_(shm_pool_id),
+      worker_startup_token_counter_(0),
       io_service_(&io_service),
       node_id_(node_id),
       node_address_(node_address),
@@ -333,13 +336,11 @@ WorkerPool::BuildProcessCommandArgs(const Language &language,
     worker_command_args.push_back(token);
   }
 
-  if (language == Language::PYTHON) {
     RAY_CHECK(worker_type == rpc::WorkerType::WORKER || IsIOWorkerType(worker_type));
     if (IsIOWorkerType(worker_type)) {
       // Without "--worker-type", by default the worker type is rpc::WorkerType::WORKER.
       worker_command_args.push_back("--worker-type=" + rpc::WorkerType_Name(worker_type));
     }
-  }
 
   if (IsIOWorkerType(worker_type)) {
     RAY_CHECK(!RayConfig::instance().object_spilling_config().empty());
@@ -439,6 +440,11 @@ WorkerPool::BuildProcessCommandArgs(const Language &language,
     // Support forking in gRPC.
     env.insert({"GRPC_ENABLE_FORK_SUPPORT", "True"});
     env.insert({"GRPC_POLL_STRATEGY", "poll"});
+  }
+
+   
+  if (language == Language::PYTHON){
+    worker_command_args.push_back("--shm-pool-id="+shm_pool_id_); 
   }
 
   return {std::move(worker_command_args), std::move(env)};

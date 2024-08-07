@@ -150,6 +150,9 @@ void LocalObjectManager::FlushFreeObjects() {
   last_free_objects_at_ms_ = current_time_ms();
 }
 
+
+// miami 
+// definition of spill_object_callback
 void LocalObjectManager::SpillObjectUptoMaxThroughput() {
   if (RayConfig::instance().object_spilling_config().empty()) {
     return;
@@ -177,7 +180,7 @@ bool LocalObjectManager::SpillObjectsOfSize(int64_t num_bytes_to_spill) {
   if (RayConfig::instance().object_spilling_config().empty()) {
     return false;
   }
-
+  //RAY_CHECK(3==0) << "FAULTING HERE FOR SPILL";
   RAY_LOG(DEBUG) << "Choosing objects to spill of total size " << num_bytes_to_spill;
   int64_t bytes_to_spill = 0;
   auto it = pinned_objects_.begin();
@@ -300,6 +303,8 @@ void LocalObjectManager::SpillObjectsInternal(
     absl::MutexLock lock(&mutex_);
     num_active_workers_ += 1;
   }
+
+  // bronx
   io_worker_pool_.PopSpillWorker(
       [this, objects_to_spill, callback](std::shared_ptr<WorkerInterface> io_worker) {
         rpc::SpillObjectsRequest request;
@@ -376,6 +381,7 @@ void LocalObjectManager::SpillObjectsInternal(
   }
 }
 
+// miami
 void LocalObjectManager::OnObjectSpilled(const std::vector<ObjectID> &object_ids,
                                          const rpc::SpillObjectsReply &worker_reply) {
   for (size_t i = 0; i < static_cast<size_t>(worker_reply.spilled_objects_url_size());

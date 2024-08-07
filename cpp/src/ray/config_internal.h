@@ -31,6 +31,9 @@ enum class RunMode { SINGLE_PROCESS, CLUSTER };
 
 class ConfigInternal {
  public:
+
+  std::string shm_pool_id;
+
   WorkerType worker_type = WorkerType::DRIVER;
 
   RunMode run_mode = RunMode::SINGLE_PROCESS;

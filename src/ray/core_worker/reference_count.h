@@ -68,13 +68,15 @@ class ReferenceCounter : public ReferenceCounterInterface,
   using LineageReleasedCallback =
       std::function<int64_t(const ObjectID &, std::vector<ObjectID> *)>;
 
-  ReferenceCounter(const rpc::Address &rpc_address,
+  ReferenceCounter(const std::string shm_pool_id,
+                   const rpc::Address &rpc_address,
                    pubsub::PublisherInterface *object_info_publisher,
                    pubsub::SubscriberInterface *object_info_subscriber,
                    const std::function<bool(const NodeID &node_id)> &check_node_alive,
                    bool lineage_pinning_enabled = false,
                    rpc::ClientFactoryFn client_factory = nullptr)
-      : rpc_address_(rpc_address),
+      : shm_pool_id_(shm_pool_id),
+        rpc_address_(rpc_address),
         lineage_pinning_enabled_(lineage_pinning_enabled),
         borrower_pool_(client_factory),
         object_info_publisher_(object_info_publisher),
@@ -1000,6 +1002,8 @@ class ReferenceCounter : public ReferenceCounterInterface,
   void RemoveLocalReferenceInternal(const ObjectID &object_id,
                                     std::vector<ObjectID> *deleted)
       ABSL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+
+  std::string shm_pool_id_ = "MIAMI";
 
   /// Address of our RPC server. This is used to determine whether we own a
   /// given object or not, by comparing our WorkerID with the WorkerID of the

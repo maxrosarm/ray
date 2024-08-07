@@ -193,7 +193,8 @@ const LocalObject *ObjectLifecycleManager::CreateObjectInternal(
     // More space is still needed.
     if (space_needed > 0) {
       RAY_LOG(DEBUG) << "attempt to allocate " << object_info.GetObjectSize()
-                     << " failed, need " << space_needed;
+                     << " failed, need " << space_needed 
+                     << " on attempt #" << num_tries;
       break;
     }
   }

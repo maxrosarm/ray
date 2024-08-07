@@ -346,6 +346,7 @@ cdef extern from "ray/core_worker/core_worker.h" nogil:
                   const shared_ptr[LocalMemoryBuffer] &creation_task_exception_pb_bytes)
 
     cdef cppclass CCoreWorkerOptions "ray::core::CoreWorkerOptions":
+        c_string shm_pool_id
         CWorkerType worker_type
         CLanguage language
         c_string store_socket

@@ -182,6 +182,12 @@ parser.add_argument(
         "to import before accepting work."
     ),
 )
+parser.add_argument(
+    "--shm-pool-id",
+    required=True,
+    type=str,
+    help="shared memory pool id"
+)
 
 if __name__ == "__main__":
     # NOTE(sang): For some reason, if we move the code below
@@ -203,7 +209,7 @@ if __name__ == "__main__":
     # Try installing uvloop as default event-loop implementation
     # for asyncio
     try_install_uvloop()
-
+    shm_pool_id = args.shm_pool_id
     raylet_ip_address = args.raylet_ip_address
     if raylet_ip_address is None:
         raylet_ip_address = args.node_ip_address
@@ -251,6 +257,10 @@ if __name__ == "__main__":
         )
 
     ray._private.worker._global_node = node
+    ray._private.worker.shm_pool_id_ = shm_pool_id
+
+    #import pdb; pdb.set_trace()
+
     ray._private.worker.connect(
         node,
         node.session_name,

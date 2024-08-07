@@ -1683,7 +1683,9 @@ class CoreWorker : public rpc::CoreWorkerServiceHandler {
     }
   }
 
+  
   const CoreWorkerOptions options_;
+  const std::string shm_pool_id_;
 
   /// Callback to get the current language (e.g., Python) call site.
   std::function<void(std::string *)> get_call_site_;

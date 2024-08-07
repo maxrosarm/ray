@@ -26,9 +26,13 @@ std::unique_ptr<CoreWorkerProcessImpl> core_worker_process;
 }  // namespace
 
 void CoreWorkerProcess::Initialize(const CoreWorkerOptions &options) {
+  // here was good 
+
   RAY_CHECK(!core_worker_process)
       << "The process is already initialized for core worker.";
   core_worker_process.reset(new CoreWorkerProcessImpl(options));
+
+  //RAY_CHECK(1!=1) << "Test stop here, looking at shm_pool_id_: " << options.shm_pool_id;
 
 #ifndef _WIN32
   // NOTE(kfstorm): std::atexit should be put at the end of `CoreWorkerProcess`
@@ -73,8 +77,10 @@ std::shared_ptr<CoreWorker> CoreWorkerProcess::TryGetWorker() {
   return core_worker_process->TryGetCoreWorker();
 }
 
-CoreWorkerProcessImpl::CoreWorkerProcessImpl(const CoreWorkerOptions &options)
-    : options_(options),
+CoreWorkerProcessImpl::CoreWorkerProcessImpl(
+  const CoreWorkerOptions &options
+  ) : options_(options),
+      shm_pool_id_(options.shm_pool_id),
       worker_id_(options.worker_type == WorkerType::DRIVER
                      ? ComputeDriverIdFromJob(options_.job_id)
                      : WorkerID::FromRandom()) {

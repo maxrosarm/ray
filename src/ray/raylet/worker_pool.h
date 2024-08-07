@@ -186,7 +186,9 @@ class WorkerPool : public WorkerPoolInterface, public IOWorkerPoolInterface {
   /// \param ray_debugger_external Ray debugger in workers will be started in a way
   /// that they are accessible from outside the node.
   /// \param get_time A callback to get the current time.
-  WorkerPool(instrumented_io_context &io_service,
+  WorkerPool(
+             const std::string shm_pool_id,
+             instrumented_io_context &io_service,
              const NodeID node_id,
              const std::string node_address,
              const std::function<int64_t()> &get_num_cpus_available,
@@ -359,6 +361,8 @@ class WorkerPool : public WorkerPoolInterface, public IOWorkerPoolInterface {
   /// Try to prestart a number of CPU workers with the given language.
   ///
   void PrestartDefaultCpuWorkers(ray::Language language, int64_t num_needed);
+
+ const std::string shm_pool_id_;
 
   /// Return the current size of the worker pool for the requested language. Counts only
   /// idle workers.

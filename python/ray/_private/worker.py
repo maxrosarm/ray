@@ -1200,7 +1200,7 @@ class RayContext(BaseContext, Mapping):
         # Include disconnect() to stay consistent with ClientContext
         ray.shutdown()
 
-
+shm_pool_id_: str= "DETROIT"
 global_worker = Worker()
 """Worker: The global Worker object for this worker process.
 
@@ -2368,6 +2368,7 @@ def connect(
         logs_dir = node.get_logs_dir_path()
 
     worker.core_worker = ray._raylet.CoreWorker(
+        shm_pool_id_,
         mode,
         node.plasma_store_socket_name,
         node.raylet_socket_name,

@@ -115,7 +115,8 @@ class CoreWorkerProcessImpl {
   /// Create an `CoreWorkerProcessImpl` with proper options.
   ///
   /// \param[in] options The various initialization options.
-  explicit CoreWorkerProcessImpl(const CoreWorkerOptions &options);
+  explicit CoreWorkerProcessImpl(
+    const CoreWorkerOptions &options);
 
   ~CoreWorkerProcessImpl();
 
@@ -139,6 +140,8 @@ class CoreWorkerProcessImpl {
  private:
   /// The various options.
   const CoreWorkerOptions options_;
+
+  std::string shm_pool_id_;
 
   /// The core worker instance of this worker process.
   std::shared_ptr<CoreWorker> core_worker_ ABSL_GUARDED_BY(mutex_);

@@ -128,6 +128,7 @@ std::optional<ObjectLocation> TryGetLocalObjectLocation(
 
 CoreWorker::CoreWorker(const CoreWorkerOptions &options, const WorkerID &worker_id)
     : options_(options),
+      shm_pool_id_(options.shm_pool_id),
       get_call_site_(RayConfig::instance().record_ref_creation_sites()
                          ? options_.get_lang_stack
                          : nullptr),
@@ -148,7 +149,7 @@ CoreWorker::CoreWorker(const CoreWorkerOptions &options, const WorkerID &worker_
     initialized_ = true;
     intialize_cv_.SignalAll();
   });
-  RAY_LOG(DEBUG) << "Constructing CoreWorker, worker_id: " << worker_id;
+  RAY_LOG(DEBUG) << "Constructing CoreWorker, worker_id: " << worker_id << " with pool id: " << shm_pool_id_;
 
   if (RayConfig::instance().kill_child_processes_on_worker_exit_with_raylet_subreaper()) {
 #ifdef __linux__
@@ -323,6 +324,7 @@ CoreWorker::CoreWorker(const CoreWorkerOptions &options, const WorkerID &worker_
     return node != nullptr;
   };
   reference_counter_ = std::make_shared<ReferenceCounter>(
+      shm_pool_id_,
       rpc_address_,
       /*object_info_publisher=*/object_info_publisher_.get(),
       /*object_info_subscriber=*/object_info_subscriber_.get(),
